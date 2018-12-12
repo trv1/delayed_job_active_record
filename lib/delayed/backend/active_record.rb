@@ -55,9 +55,14 @@ module Delayed
           job = nextScope.first
           return unless job
           job.with_lock do
-            job.locked_at = now
-            job.locked_by = worker.name
-            job.save!
+            # Check still not locked by a parallel job:
+            if readyScope.where(id: job.id).count == 1
+              job.locked_at = now
+              job.locked_by = worker.name
+              job.save!
+            else
+              return
+            end
           end
           job
         end
